@@ -1,109 +1,72 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-import logging
-import os
-from typing import Any
+# Simple FastAPI wrapper for local ADK Expense Auditor
+# This file removes all Vertex AI and Google Cloud dependencies.
+# It serves the frontend UI and provides a /api/query endpoint that forwards
+# the user message to the ADK app defined in `app.agent`.
 
-import vertexai
-from dotenv import load_dotenv
-from google.adk.artifacts import GcsArtifactService, InMemoryArtifactService
-from google.cloud import logging as google_cloud_logging
-from vertexai.agent_engines.templates.adk import AdkApp
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
+# Import the ADK application (App instance) defined in app.agent
 from app.agent import app as adk_app
-from app.app_utils.telemetry import setup_telemetry
-from app.app_utils.typing import Feedback
 
-# Load environment variables from .env file at runtime
-load_dotenv()
-
-
-class AgentEngineApp(AdkApp):
-    def project_id(self) -> str:
-        """Returns the project ID, bypassing auth in integration tests."""
-        if os.getenv("INTEGRATION_TEST") == "TRUE":
-            return "test-project"
-        return super().project_id()
-
-    def set_up(self) -> None:
-        """Initialize the agent engine app with logging and telemetry."""
-        if os.getenv("INTEGRATION_TEST") == "TRUE":
-            # Skip Vertex AI initialization during integration tests where credentials are unavailable
-            logging.info("Skipping vertexai.init() in integration test mode.")
-        else:
-            vertexai.init()
-        setup_telemetry()
-        super().set_up()
-        logging.basicConfig(level=logging.INFO)
-        if os.getenv("INTEGRATION_TEST") == "TRUE":
-            class DummyLogger:
-                def log_struct(self, data: dict, severity: str = "INFO"):
-                    logging.info(f"DummyLogger [{severity}]: {data}")
-            self.logger = DummyLogger()
-        else:
-            logging_client = google_cloud_logging.Client()
-            self.logger = logging_client.logger(__name__)
-        if gemini_location:
-            os.environ["GOOGLE_CLOUD_LOCATION"] = gemini_location
-
-    def register_feedback(self, feedback: dict[str, Any]) -> None:
-        """Collect and log feedback."""
-        feedback_obj = Feedback.model_validate(feedback)
-        self.logger.log_struct(feedback_obj.model_dump(), severity="INFO")
-
-    def register_operations(self) -> dict[str, list[str]]:
-        """Registers the operations of the Agent."""
-        operations = super().register_operations()
-        operations[""] = [*operations.get("", []), "register_feedback"]
-        return operations
-
-    def clone(self) -> "AgentEngineApp":
-        """Returns a clone of the Agent Runtime application."""
-        return self
+class QueryRequest(BaseModel):
+    """Pydantic model for incoming query payload."""
+    message: str
 
 
-gemini_location = os.environ.get("GOOGLE_CLOUD_LOCATION")
-logs_bucket_name = os.environ.get("LOGS_BUCKET_NAME")
-def _create_agent_runtime() -> AgentEngineApp:
-    kwargs = {}
-    if os.getenv("INTEGRATION_TEST") == "TRUE":
-        os.environ.setdefault("GOOGLE_CLOUD_PROJECT", "test-project")
-        os.environ.setdefault("VERTEXAI_PROJECT", "test-project")
-        # Initialize vertexai with a project and location for testing to avoid credentials lookup
-        vertexai.init(project="test-project", location="us-central1")
-        # Pass a mock instrumentor builder to bypass Google auth credentials search
-        kwargs["instrumentor_builder"] = lambda project_id: None
-    return AgentEngineApp(
-        app=adk_app,
-        artifact_service_builder=lambda: (
-            GcsArtifactService(bucket_name=logs_bucket_name)
-            if logs_bucket_name
-            else InMemoryArtifactService()
-        ),
-        **kwargs,
+def create_app() -> FastAPI:
+    """Create and configure the FastAPI application.
+
+    - Serves static files from the `frontend` directory at `/ui`.
+    - Exposes a POST `/api/query` endpoint that calls the ADK workflow.
+    - Enables CORS for local development.
+    """
+    app = FastAPI()
+
+    # Mount the UI (frontend) directory
+    app.mount(
+        "/ui",
+        StaticFiles(directory="frontend", html=True),
+        name="ui",
     )
 
-class _LazyAgentRuntime:
-    def __init__(self):
-        self._instance: AgentEngineApp | None = None
-    def _ensure_instance(self) -> AgentEngineApp:
-        if self._instance is None:
-            self._instance = _create_agent_runtime()
-        return self._instance
-    def __getattr__(self, item):
-        return getattr(self._ensure_instance(), item)
+    # CORS middleware – allow any origin for development convenience
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-# Expose a lazily-initialized agent_runtime instance for imports
-agent_runtime = _LazyAgentRuntime()
+    @app.post("/api/query")
+    async def query_endpoint(payload: QueryRequest):
+        """Receive a user message, run the ADK workflow, and return the report.
+        Expected JSON body: {"message": "<user query>"}"""
+        message = payload.message.strip()
+        if not message:
+            raise HTTPException(status_code=400, detail="Missing 'message' in request body")
+        from google.adk.runners import Runner
+        from google.adk.sessions import InMemorySessionService
+        from google.genai import types
 
+        runner = Runner(app=adk_app, session_service=InMemorySessionService(), auto_create_session=True)
+        content = types.Content(role="user", parts=[types.Part.from_text(text=message)])
+        report_parts: list[str] = []
+        for event in runner.run(user_id="ui_user", session_id="ui_user", new_message=content):
+            if event.content and event.content.parts:
+                for part in event.content.parts:
+                    if part.text:
+                        report_parts.append(part.text)
+            elif hasattr(event, "output") and event.output:
+                report_parts.append(str(event.output))
+        report = "\n".join(report_parts).strip()
+        return JSONResponse(content={"success": True, "report": report})
+    
+    return app
+
+# Export the FastAPI instance for uvicorn
+app = create_app()

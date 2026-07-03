@@ -24,8 +24,9 @@ from google.adk.agents import LlmAgent
 from google.adk.apps import App
 from google.adk.models import Gemini
 from google.adk.tools import AgentTool
-from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
-from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPServerParams
+# MCP integration removed for local-only runtime
+# from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
+# from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPServerParams
 from google.adk.events import RequestInput
 from google.adk.workflow import Workflow, Edge, START, DEFAULT_ROUTE, node
 from google.adk import Context
@@ -33,9 +34,10 @@ from google.adk import Context
 from app.config import config
 
 # Initialize MCP toolset to connect to local MCP server
-mcp_toolset = McpToolset(connection_params=StreamableHTTPServerParams(url=f"http://localhost:{config.mcp_server_port}/mcp"))
-mcp_toolset.name = "mcp"
-mcp_toolset.description = "MCP toolset for expense auditor"
+# MCP toolset initialization removed for local runtime
+# mcp_toolset = McpToolset(connection_params=StreamableHTTPServerParams(url=f"http://localhost:{config.mcp_server_port}/mcp"))
+# mcp_toolset.name = "mcp"
+# mcp_toolset.description = "MCP toolset for expense auditor"
 
 
 # ---------------------------------------------------------------------------
@@ -120,7 +122,7 @@ audit_orchestrator = LlmAgent(
     model=Gemini(
         model=config.model,
     ),
-    tools=[AgentTool(agent=receipt_parser), AgentTool(agent=policy_checker), mcp_toolset]
+    tools=[AgentTool(agent=receipt_parser), AgentTool(agent=policy_checker)]
 )
 
 

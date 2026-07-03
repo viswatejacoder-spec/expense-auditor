@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Expense Auditor AI</title>
+
+    <meta name="description" content="AI-powered Expense Auditor built with Google ADK" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <!-- Background -->
+    <div class="bg-gradient"></div>
+
+    <div class="blur blur1"></div>
+    <div class="blur blur2"></div>
+    <div class="blur blur3"></div>
+
+    <!-- Navigation -->
+
+    <header class="navbar">
+
+        <div class="logo">
+
+            <div class="logo-circle">
+                ✦
+            </div>
+
+            <span>
+                Expense Auditor AI
+            </span>
+
+        </div>
+
+        <div class="status">
+
+            <span class="status-dot"></span>
+
+            Agent Online
+
+        </div>
+
+    </header>
+
+    <!-- Main -->
+
+    <main class="container">
+
+        <!-- Hero -->
+
+        <section class="hero">
+
+            <div class="badge">
+
+                Google ADK Powered
+
+            </div>
+
+            <h1>
+
+                Audit Expenses
+                <span>with AI</span>
+
+            </h1>
+
+            <p>
+
+                Paste receipts, invoices, or expense descriptions.
+                Our AI agent validates policy compliance,
+                extracts structured information,
+                and generates an audit report instantly.
+
+            </p>
+
+        </section>
+
+        <!-- Dashboard -->
+
+        <section class="dashboard">
+
+            <!-- LEFT -->
+
+            <div class="glass panel-left">
+
+                <div class="panel-header">
+
+                    <h2>
+
+                        Expense Input
+
+                    </h2>
+
+                    <span class="panel-tag">
+
+                        AI Analysis
+
+                    </span>
+
+                </div>
+
+                <label>
+
+                    Paste Expense
+
+                </label>
+
+                <textarea id="query-input" rows="8" placeholder="Example:
+
+Lunch at Cafe
+Amount: $45 USD
+Category: Meals
+Date: 2024-05-10"></textarea>
+
+                <button id="run-query" class="primary-btn">
+
+                    <span>
+
+                        Audit Expense
+
+                    </span>
+
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+
+                        <path d="M5 10h10M11 4l6 6-6 6" />
+
+                    </svg>
+
+                </button>
+
+            </div>
+
+            <!-- RIGHT -->
+
+            <div class="glass panel-right">
+
+                <div class="panel-header">
+
+                    <h2>
+
+                        Audit Report
+
+                    </h2>
+
+                    <span class="panel-tag">
+
+                        Live
+
+                    </span>
+
+                </div>
+
+                <div id="overview-data" class="overview-box">
+
+                    Waiting for your first audit...
+
+                </div>
+
+                <pre id="query-result" class="result-box">
+
+Run an audit to see the AI generated report.
+
+                </pre>
+
+            </div>
+
+        </section>
+
+        <!-- Features -->
+
+        <section class="features">
+
+            <div class="glass feature">
+
+                <div class="icon">
+
+                    ⚡
+
+                </div>
+
+                <h3>
+
+                    Instant Analysis
+
+                </h3>
+
+                <p>
+
+                    AI extracts vendors,
+                    dates,
+                    amounts,
+                    categories,
+                    and policy risks automatically.
+
+                </p>
+
+            </div>
+
+            <div class="glass feature">
+
+                <div class="icon">
+
+                    🛡
+
+                </div>
+
+                <h3>
+
+                    Policy Validation
+
+                </h3>
+
+                <p>
+
+                    Every expense is checked
+                    against your approval policies.
+
+                </p>
+
+            </div>
+
+            <div class="glass feature">
+
+                <div class="icon">
+
+                    🤖
+
+                </div>
+
+                <h3>
+
+                    Google ADK
+
+                </h3>
+
+                <p>
+
+                    Powered by Google's Agent Development Kit
+                    and Gemini models.
+
+                </p>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <footer>
+
+        <p>
+
+            © 2026 Expense Auditor AI
+
+        </p>
+
+        <p>
+
+            Built with Google ADK • Gemini • FastAPI
+
+        </p>
+
+    </footer>
+
+    <script src="app.js"></script>
+
+</body>
+
+</html>
